@@ -1,1 +1,1 @@
-# DIP-VBTV model for denoising and deblurring
+# DIP-VBTV models for denoising and deblurring
