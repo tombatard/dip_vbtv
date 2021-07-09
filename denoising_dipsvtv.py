@@ -42,8 +42,8 @@ OPT_OVER='net'
 
 reg_noise_std = 1./30.
 LR = 0.01
-Lambda = 0.05
-beta = 3000.
+Lambda = 0.01
+beta = 0.
 
 OPTIMIZER = 'adam' 
 exp_weight = 0.99

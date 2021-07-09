@@ -47,28 +47,6 @@ data_dict = { ORIGINAL: Data(img_np),
 H = get_h(data_dict[CORRUPTED].img.shape[0], BLUR_TYPE, USE_FOURIER, dtype)
 
 
-# Compute the connection 1-form
-luminance = (1/sqrt(3))*torch.unsqueeze(torch.sum(img_degraded_torch,dim=1),dim=1)  
-differential_luminance = kornia.filters.SpatialGradient()(luminance)
-luminance = torch.unsqueeze(luminance,dim=2)
-luminance = luminance.repeat(1,1,2,1,1)
-    
-chrominance1 = (1/sqrt(2))*torch.narrow(img_degraded_torch,1,0,1) - (1/sqrt(2))*torch.narrow(img_degraded_torch,1,1,1)
-differential_chrominance1 = kornia.filters.SpatialGradient()(chrominance1)
-chrominance1 = torch.unsqueeze(chrominance1,dim=2)
-chrominance1 = chrominance1.repeat(1,1,2,1,1)
-
-chrominance2 = (1/sqrt(6))*torch.narrow(img_degraded_torch,1,0,1) + (1/sqrt(6))*torch.narrow(img_degraded_torch,1,1,1) - (2/sqrt(6))*torch.narrow(img_degraded_torch,1,2,1)
-differential_chrominance2 = kornia.filters.SpatialGradient()(chrominance2)
-chrominance2 = torch.unsqueeze(chrominance2,dim=2)
-chrominance2 = chrominance2.repeat(1,1,2,1,1)
-norm_squared_chrominance = torch.mul(chrominance1,chrominance1) + torch.mul(chrominance2,chrominance2)
-
-epsilon = 0.01 * torch.ones((1,1,2,img_pil.size[1],img_pil.size[0])).type(torch.cuda.FloatTensor)
-
-omega11 = torch.div(differential_luminance,epsilon+luminance)
-omega23 = torch.div(torch.mul(chrominance1,differential_chrominance2)-torch.mul(chrominance2,differential_chrominance1),epsilon+norm_squared_chrominance)
-
 # Setup
 INPUT = 'noise'
 pad = 'reflection'
@@ -76,16 +54,16 @@ OPT_OVER='net'
 
 reg_noise_std = 0.01 
 LR = 0.001
-Lambda = 0.001
+Lambda = 0.0001
 beta = 3000.
 
 OPTIMIZER = 'adam' 
 exp_weight = 0.99
 
-num_iter = 25000
+num_iter = 20000
 input_depth = 32
 
-full_net = VectorBundleTotalVariationDeblurring(input_depth, pad, omega11, omega23, beta, height=img_pil.size[1], width=img_pil.size[0], upsample_mode='bilinear' ).type(dtype)
+full_net = VectorialTotalVariation(input_depth, pad, omega11, omega23, beta, height=img_pil.size[1], width=img_pil.size[0], upsample_mode='bilinear' ).type(dtype)
 
 net_input = get_noise(input_depth, INPUT, (img_pil.size[1], img_pil.size[0])).type(dtype).detach()
 
