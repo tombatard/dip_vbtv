@@ -54,7 +54,6 @@ OPT_OVER='net'
 
 reg_noise_std = 0.01 
 LR = 0.001
-Lambda = 0.0001
 
 OPTIMIZER = 'adam' 
 exp_weight = 0.99
@@ -62,7 +61,7 @@ exp_weight = 0.99
 num_iter = 20000
 input_depth = 32
 
-full_net = VectorialTotalVariation(input_depth, pad, height=img_pil.size[1], width=img_pil.size[0], upsample_mode='bilinear' ).type(dtype)
+full_net = DIP(input_depth, pad, upsample_mode='bilinear' ).type(dtype)
 
 net_input = get_noise(input_depth, INPUT, (img_pil.size[1], img_pil.size[0])).type(dtype).detach()
 
@@ -71,7 +70,6 @@ s  = sum([np.prod(list(p.size())) for p in full_net.parameters()]);
 
 # Loss
 mse = torch.nn.MSELoss().type(dtype)
-mae = torch.nn.L1Loss().type(dtype)
 
 net_input_saved = net_input.detach().clone()
 noise = net_input.detach().clone()
@@ -84,19 +82,17 @@ def closure():
 
 	net_input = net_input_saved + (noise.normal_() * reg_noise_std)    
 
-	net_output, vbtv = full_net(net_input)	
+	net_output = full_net(net_input)	
 
-	loss_dataterm = mse(H(net_output),img_degraded_torch)
-	loss_regularizer = mae(vbtv,torch.zeros(1,img_pil.size[1],img_pil.size[0]).type(dtype))
+	loss = mse(H(net_output),img_degraded_torch)
 
-	total_loss = loss_dataterm + Lambda*loss_regularizer
-	total_loss.backward(retain_graph=True)
+	loss.backward(retain_graph=True)
         
 	out_im_avg = out_im_avg * exp_weight + net_output.detach().cpu().numpy()[0] * (1 - exp_weight)
 
 	i += 1
 
-	return total_loss
+	return loss
 
 p = get_params(OPT_OVER, full_net, net_input, input_depth)
 optimize(OPTIMIZER, p, closure, LR, num_iter)
